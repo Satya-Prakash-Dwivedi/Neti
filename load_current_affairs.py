@@ -10,7 +10,7 @@ django.setup()
 from current_affairs.models import DailyDigest, Topic, MCQ, MainsQuestion
 
 def load_data():
-    dump_path = '../client/dump.json'
+    dump_path = 'dump.json'
     if not os.path.exists(dump_path):
         print(f"Error: {dump_path} not found.")
         sys.exit(1)
