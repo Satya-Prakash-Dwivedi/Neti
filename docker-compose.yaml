@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: neti_postgres_local
+    environment:
+      POSTGRES_DB: neti_db
+      POSTGRES_USER: neti_user
+      POSTGRES_PASSWORD: neti_secure_pass123
+    ports:
+      - "5433:5432"  # Map host port 5433 to container port 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
