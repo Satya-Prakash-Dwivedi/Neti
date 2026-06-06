@@ -110,7 +110,7 @@ class CreateRazorpayOrderView(APIView):
         if book_id:
             book = get_object_or_404(Book, id=book_id)
             amount = int(book.full_price * 100)
-            title = f"Book: {book.title}"
+            title = f"Book: {book.book_name}"
             existing_order = Order.objects.filter(user=request.user, book=book, status='Paid').first()
         else:
             quiz = get_object_or_404(Quiz, id=quiz_id)

@@ -25,8 +25,8 @@ class Topic(models.Model):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255)  # e.g. "Polity | GS-II"
     content = models.TextField()  # Supports markdown formatting
-    why_it_matters = models.TextField()
-    revise = models.TextField()
+    why_it_matters = models.TextField(blank=True)
+    revise = models.TextField(blank=True)
     pyq_connect = models.TextField(blank=True, null=True)
 
     def __str__(self):

@@ -14,7 +14,7 @@ class TopicSerializer(serializers.ModelSerializer):
         return repr
 
 class TopicAdminSerializer(serializers.ModelSerializer):
-    whyItMatters = serializers.CharField(source='why_it_matters')
+    whyItMatters = serializers.CharField(source='why_it_matters', required=False, allow_blank=True, allow_null=True)
     pyqConnect = serializers.CharField(source='pyq_connect', required=False, allow_blank=True, allow_null=True)
 
     class Meta:
@@ -84,7 +84,7 @@ class DailyDigestAdminSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         topics_data = validated_data.pop('topics', [])
-        practice_questions = validated_data.pop('practice_questions', {})
+        practice_questions = validated_data.pop('practiceQuestions', {})
         
         with transaction.atomic():
             digest = DailyDigest.objects.create(**validated_data)
@@ -104,7 +104,7 @@ class DailyDigestAdminSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         topics_data = validated_data.pop('topics', None)
-        practice_questions = validated_data.pop('practice_questions', None)
+        practice_questions = validated_data.pop('practiceQuestions', None)
         
         with transaction.atomic():
             instance.date_text = validated_data.get('date_text', instance.date_text)

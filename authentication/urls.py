@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import RegisterView, UserProfileView
+from .views import RegisterView, UserProfileView, PasswordResetRequestView, PasswordResetConfirmView
 
 urlpatterns = [
     # Registration endpoint
@@ -12,4 +12,8 @@ urlpatterns = [
     
     # Authenticated user profile details
     path('profile/', UserProfileView.as_view(), name='auth_profile'),
+
+    # Password Reset
+    path('password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
+    path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]
