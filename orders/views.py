@@ -39,7 +39,7 @@ def generate_invoice_pdf(order):
     p.drawString(400, 630, "Amount (INR)")
     
     p.setFont("Helvetica-Bold", 12)
-    item_title = order.book.title if order.book else order.quiz.title
+    item_title = order.book.book_name if order.book else order.quiz.title
     p.drawString(100, 610, f"Purchase: {item_title}")
     p.drawString(400, 610, f"Rs. {order.amount}")
     
@@ -73,7 +73,7 @@ def send_invoice_email(order, pdf_bytes):
     # Base64 encode the PDF
     pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
     
-    item_title = order.book.title if order.book else order.quiz.title
+    item_title = order.book.book_name if order.book else order.quiz.title
     payload = {
         "sender": {"name": "Neti Academy", "email": sender_email},
         "to": [{"email": order.user.email, "name": order.user.name}],
@@ -229,7 +229,7 @@ class AdminOrdersView(APIView):
     def get(self, request):
         # We use select_related for efficiency, though .values() implicitly does JOINs.
         orders = Order.objects.order_by('-created_at').values(
-            'id', 'user__name', 'user__email', 'quiz__title', 'book__title', 'amount', 'status', 'razorpay_payment_id', 'created_at'
+            'id', 'user__name', 'user__email', 'quiz__title', 'book__book_name', 'amount', 'status', 'razorpay_payment_id', 'created_at'
         )
         return Response(list(orders), status=status.HTTP_200_OK)
 

@@ -95,3 +95,60 @@ class PasswordResetConfirmView(APIView):
             return Response({'message': 'Password has been reset successfully'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from django.conf import settings
+from rest_framework_simplejwt.tokens import RefreshToken
+
+class GoogleLoginView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'error': 'No token provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        google_client_id = os.getenv('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID')
+
+        try:
+            # Verify the token with Google
+            idinfo = id_token.verify_oauth2_token(
+                token, google_requests.Request(), google_client_id
+            )
+
+            email = idinfo.get('email')
+            name = idinfo.get('name', '')
+
+            if not email:
+                return Response({'error': 'Google token did not contain an email address'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get or create the user
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    'name': name,
+                }
+            )
+            
+            # If created, set an unusable password
+            if created:
+                user.set_unusable_password()
+                user.save()
+
+            # Generate standard JWT tokens for the user
+            refresh = RefreshToken.for_user(user)
+
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': {
+                    'name': user.name,
+                    'email': user.email,
+                    'role': user.role
+                }
+            }, status=status.HTTP_200_OK)
+
+        except ValueError:
+            # Invalid token
+            return Response({'error': 'Invalid Google token'}, status=status.HTTP_400_BAD_REQUEST)

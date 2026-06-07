@@ -30,7 +30,7 @@ class QuizSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quiz
-        fields = ('id', 'title', 'book', 'is_live', 'created_at', 'questions', 'question_count')
+        fields = ('id', 'title', 'book', 'is_live', 'is_free_test', 'created_at', 'questions', 'question_count')
 
     def get_question_count(self, obj):
         return obj.questions.count()
@@ -44,7 +44,7 @@ class QuizAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quiz
-        fields = ('id', 'title', 'book', 'is_live', 'created_at', 'questions', 'question_count')
+        fields = ('id', 'title', 'book', 'is_live', 'is_free_test', 'created_at', 'questions', 'question_count')
 
     def get_question_count(self, obj):
         return obj.questions.count()

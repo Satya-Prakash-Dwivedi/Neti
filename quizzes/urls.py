@@ -3,7 +3,7 @@ from .views import (
     CSVParsePreviewView, QuizCreateView, QuizDeleteView,
     AdminQuizListView, StudentQuizListView, QuizDetailView, 
     QuizSubmitView, StudentAttemptHistoryView, AdminQuizAttemptsView,
-    AdminQuizDetailView, AdminBookListCreateView, AdminBookDetailView,
+    AdminQuizDetailView, AdminQuizToggleFreeView, AdminBookListCreateView, AdminBookDetailView,
     CategoryListView, SubjectListView, ClassListView, BookDetailView
 )
 
@@ -13,6 +13,7 @@ urlpatterns = [
     path('admin/create/', QuizCreateView.as_view(), name='quiz_create'),
     path('admin/list/', AdminQuizListView.as_view(), name='quiz_admin_list'),
     path('admin/delete/<int:quiz_id>/', QuizDeleteView.as_view(), name='quiz_admin_delete'),
+    path('admin/toggle-free/<int:quiz_id>/', AdminQuizToggleFreeView.as_view(), name='quiz_admin_toggle_free'),
     path('admin/attempts/<int:quiz_id>/', AdminQuizAttemptsView.as_view(), name='quiz_admin_attempts'),
     path('admin/detail/<int:pk>/', AdminQuizDetailView.as_view(), name='quiz_admin_detail'),
     path('admin/books/', AdminBookListCreateView.as_view(), name='admin_books_list'),

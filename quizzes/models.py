@@ -21,6 +21,7 @@ class Quiz(models.Model):
     title = models.CharField(max_length=255)
     book = models.ForeignKey(Book, related_name='chapters', on_delete=models.CASCADE, null=True, blank=True)
     is_live = models.BooleanField(default=False)
+    is_free_test = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

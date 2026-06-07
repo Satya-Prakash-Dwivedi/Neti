@@ -160,7 +160,7 @@ class AdminQuizListView(generics.ListAPIView):
 class StudentQuizListView(generics.ListAPIView):
     """API endpoint for students to see active tests."""
     permission_classes = (permissions.IsAuthenticated,)
-    queryset = Quiz.objects.filter(is_live=True).order_by('-created_at')
+    queryset = Quiz.objects.filter(is_live=True).order_by('created_at')
     serializer_class = QuizSerializer
 
 
@@ -250,6 +250,28 @@ class AdminQuizDetailView(generics.RetrieveAPIView):
     permission_classes = (permissions.IsAdminUser,)
     queryset = Quiz.objects.all()
     serializer_class = QuizAdminSerializer
+
+
+class AdminQuizToggleFreeView(APIView):
+    """API endpoint for admins to toggle a quiz as the free test for its book."""
+    permission_classes = (permissions.IsAdminUser,)
+
+    def post(self, request, quiz_id, *args, **kwargs):
+        quiz = get_object_or_404(Quiz, id=quiz_id)
+        is_free = request.data.get('is_free_test', True)
+
+        try:
+            with transaction.atomic():
+                if is_free and quiz.book:
+                    # Mark all other quizzes in the same book as not free
+                    Quiz.objects.filter(book=quiz.book).exclude(id=quiz.id).update(is_free_test=False)
+                
+                quiz.is_free_test = is_free
+                quiz.save()
+            
+            return Response({'message': 'Quiz free test status updated successfully.', 'is_free_test': quiz.is_free_test}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': f"Failed to update status: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # --- Book Views ---
