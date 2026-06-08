@@ -159,7 +159,7 @@ class AdminQuizListView(generics.ListAPIView):
 
 class StudentQuizListView(generics.ListAPIView):
     """API endpoint for students to see active tests."""
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
     queryset = Quiz.objects.filter(is_live=True).order_by('created_at')
     serializer_class = QuizSerializer
 
