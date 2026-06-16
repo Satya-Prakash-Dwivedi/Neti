@@ -11,29 +11,42 @@ class Command(BaseCommand):
             action='store_true',
             help='Print what would happen without actually saving to the database.',
         )
+        parser.add_argument(
+            '--force-all',
+            action='store_true',
+            help='Regenerate referral codes for ALL users, even if they already have one.',
+        )
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
+        force_all = options['force_all']
         
-        # Find users without a code
-        users_without_code = CustomUser.objects.filter(referral_code__isnull=True)
-        count = users_without_code.count()
+        # Find users
+        if force_all:
+            users_to_update = CustomUser.objects.all()
+        else:
+            users_to_update = CustomUser.objects.filter(referral_code__isnull=True)
+            
+        count = users_to_update.count()
         
         if count == 0:
-            self.stdout.write(self.style.SUCCESS('All users already have a referral code.'))
+            self.stdout.write(self.style.SUCCESS('No users found to update.'))
             return
 
-        self.stdout.write(f'Found {count} users without a referral code.')
+        if force_all:
+            self.stdout.write(f'Found {count} total users to forcefully update.')
+        else:
+            self.stdout.write(f'Found {count} users without a referral code.')
 
         if dry_run:
             self.stdout.write(self.style.WARNING('[DRY RUN] No changes will be made to the database.'))
-            for user in users_without_code:
+            for user in users_to_update:
                 self.stdout.write(f'Would generate code for: {user.email}')
             return
 
         # Actual Update
         updated_count = 0
-        for user in users_without_code:
+        for user in users_to_update:
             # Collision retry loop
             import random
             first_name = user.name.split()[0].upper() if user.name else "USER"
