@@ -7,4 +7,6 @@ urlpatterns = [
     path('user/', views.UserOrdersView.as_view(), name='user_orders'),
     path('admin/list/', views.AdminOrdersView.as_view(), name='admin_orders'),
     path('<int:order_id>/invoice/', views.DownloadInvoiceView.as_view(), name='download_invoice'),
+    path('referral-config/', views.ReferralConfigView.as_view(), name='referral_config'),
+    path('validate-referral/', views.ValidateReferralCodeView.as_view(), name='validate_referral'),
 ]

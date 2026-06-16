@@ -5,8 +5,8 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializes the CustomUser model for profile details."""
     class Meta:
         model = CustomUser
-        fields = ('id', 'name', 'email', 'role', 'purchased_products', 'created_at')
-        read_only_fields = ('id', 'role', 'purchased_products', 'created_at')
+        fields = ('id', 'name', 'email', 'role', 'purchased_products', 'created_at', 'referral_code', 'referral_points')
+        read_only_fields = ('id', 'role', 'purchased_products', 'created_at', 'referral_code', 'referral_points')
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Validates registration details and creates a hashed User instance."""

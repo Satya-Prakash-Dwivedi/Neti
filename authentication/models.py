@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+import uuid
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, name, password=None, **extra_fields):
@@ -31,11 +32,28 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    referral_code = models.CharField(max_length=10, unique=True, null=True, blank=True)
+    referral_points = models.IntegerField(default=0)
 
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name']
+
+    def save(self, *args, **kwargs):
+        import random
+        if not self.referral_code:
+            first_name = self.name.split()[0].upper() if self.name else "USER"
+            first_name = ''.join(e for e in first_name if e.isalnum())
+            base_code = first_name[:6]
+            
+            while True:
+                random_num = str(random.randint(1000, 9999))
+                code = f"{base_code}{random_num}"
+                if not CustomUser.objects.filter(referral_code=code).exists():
+                    self.referral_code = code
+                    break
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email

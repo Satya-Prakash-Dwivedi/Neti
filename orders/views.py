@@ -13,8 +13,13 @@ from django.shortcuts import get_object_or_404
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 
+from reportlab.lib.pagesizes import letter
+
 from .models import Order
 from quizzes.models import Quiz, Book
+from authentication.models import CustomUser
+from django.db.models import F
+from decimal import Decimal
 
 # Initialize Razorpay Client
 razorpay_client = razorpay.Client(
@@ -98,6 +103,7 @@ class CreateRazorpayOrderView(APIView):
     def post(self, request):
         quiz_id = request.data.get('quiz_id')
         book_id = request.data.get('book_id')
+        referral_code = request.data.get('referral_code')
         
         if not quiz_id and not book_id:
             return Response({'error': 'quiz_id or book_id is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -122,6 +128,24 @@ class CreateRazorpayOrderView(APIView):
         if existing_order:
             return Response({'error': 'Already purchased'}, status=status.HTTP_400_BAD_REQUEST)
 
+        referral_code_used = None
+        discount_applied = Decimal('0.00')
+
+        if referral_code:
+            code_upper = referral_code.upper()
+            if not CustomUser.objects.filter(referral_code=code_upper).exists():
+                return Response({'error': 'Invalid referral code.'}, status=status.HTTP_400_BAD_REQUEST)
+            if request.user.referral_code == code_upper:
+                return Response({'error': 'You cannot use your own referral code.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Apply discount
+            discount_percentage = settings.REFERRAL_DISCOUNT_PERCENTAGE
+            original_amount_inr = amount / 100
+            discount_amount_inr = (original_amount_inr * discount_percentage) / 100
+            discount_applied = Decimal(str(discount_amount_inr))
+            amount = int((original_amount_inr - discount_amount_inr) * 100)
+            referral_code_used = code_upper
+
         try:
             # Create Razorpay Order
             razorpay_order = razorpay_client.order.create({
@@ -135,7 +159,9 @@ class CreateRazorpayOrderView(APIView):
                 user=request.user,
                 quiz=quiz,
                 book=book,
-                amount=(book.full_price if book else quiz.price),
+                amount=(amount / 100),
+                referral_code_used=referral_code_used,
+                discount_applied=discount_applied,
                 razorpay_order_id=razorpay_order['id'],
                 status='Pending'
             )
@@ -184,6 +210,12 @@ class VerifyPaymentView(APIView):
             order.status = 'Paid'
             order.save()
             
+            if order.referral_code_used:
+                referrer = CustomUser.objects.filter(referral_code=order.referral_code_used).first()
+                if referrer:
+                    referrer.referral_points = F('referral_points') + settings.REFERRAL_POINTS_AWARDED
+                    referrer.save(update_fields=['referral_points'])
+            
             # Generate Invoice & Email
             pdf_bytes = generate_invoice_pdf(order)
             send_invoice_email(order, pdf_bytes)
@@ -228,8 +260,51 @@ class AdminOrdersView(APIView):
 
     def get(self, request):
         # We use select_related for efficiency, though .values() implicitly does JOINs.
-        orders = Order.objects.order_by('-created_at').values(
-            'id', 'user__name', 'user__email', 'quiz__title', 'book__book_name', 'amount', 'status', 'razorpay_payment_id', 'created_at'
-        )
-        return Response(list(orders), status=status.HTTP_200_OK)
+        orders = list(Order.objects.order_by('-created_at').values(
+            'id', 'user__name', 'user__email', 'quiz__title', 'book__book_name', 'amount', 'status', 'razorpay_payment_id', 'created_at', 'referral_code_used'
+        ))
 
+        # Map referral codes to referrer names
+        referral_codes = [o['referral_code_used'] for o in orders if o.get('referral_code_used')]
+        referrer_map = {}
+        if referral_codes:
+            referrers = CustomUser.objects.filter(referral_code__in=referral_codes).values('referral_code', 'name')
+            referrer_map = {r['referral_code']: r['name'] for r in referrers}
+            
+        points_awarded = settings.REFERRAL_POINTS_AWARDED
+
+        for o in orders:
+            o['referrer_name'] = referrer_map.get(o.get('referral_code_used'), None)
+            o['points_awarded'] = points_awarded if (o.get('referral_code_used') and o.get('status') == 'Paid') else 0
+
+        return Response(orders, status=status.HTTP_200_OK)
+
+
+class ReferralConfigView(APIView):
+    """Returns the referral discount percentage for the frontend."""
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        return Response({
+            'discount_percentage': settings.REFERRAL_DISCOUNT_PERCENTAGE,
+            'points_awarded': settings.REFERRAL_POINTS_AWARDED
+        }, status=status.HTTP_200_OK)
+
+
+class ValidateReferralCodeView(APIView):
+    """Validates a referral code."""
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        code = request.query_params.get('code')
+        if not code:
+            return Response({'valid': False, 'message': 'No code provided.'}, status=status.HTTP_200_OK)
+            
+        code_upper = code.upper()
+        if not CustomUser.objects.filter(referral_code=code_upper).exists():
+            return Response({'valid': False, 'message': 'Invalid referral code.'}, status=status.HTTP_200_OK)
+            
+        if request.user.is_authenticated and request.user.referral_code == code_upper:
+            return Response({'valid': False, 'message': 'You cannot use your own referral code.'}, status=status.HTTP_200_OK)
+            
+        return Response({'valid': True}, status=status.HTTP_200_OK)
