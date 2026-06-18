@@ -4,13 +4,14 @@ from .views import (
     AdminQuizListView, StudentQuizListView, QuizDetailView, 
     QuizSubmitView, StudentAttemptHistoryView, AdminQuizAttemptsView,
     AdminQuizDetailView, AdminQuizToggleFreeView, AdminBookListCreateView, AdminBookDetailView,
-    CategoryListView, SubjectListView, ClassListView, BookDetailView
+    CategoryListView, SubjectListView, ClassListView, BookDetailView, QuizUpdateView
 )
 
 urlpatterns = [
     # Admin endpoints
     path('admin/upload/', CSVParsePreviewView.as_view(), name='quiz_csv_upload'),
     path('admin/create/', QuizCreateView.as_view(), name='quiz_create'),
+    path('admin/update/<int:quiz_id>/', QuizUpdateView.as_view(), name='quiz_admin_update'),
     path('admin/list/', AdminQuizListView.as_view(), name='quiz_admin_list'),
     path('admin/delete/<int:quiz_id>/', QuizDeleteView.as_view(), name='quiz_admin_delete'),
     path('admin/toggle-free/<int:quiz_id>/', AdminQuizToggleFreeView.as_view(), name='quiz_admin_toggle_free'),

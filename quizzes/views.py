@@ -140,6 +140,74 @@ class QuizCreateView(APIView):
             return Response({'error': f"Failed to create quiz: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class QuizUpdateView(APIView):
+    """API endpoint for admins to update a published quiz and its questions."""
+    permission_classes = (permissions.IsAdminUser,)
+
+    def put(self, request, quiz_id, *args, **kwargs):
+        quiz = get_object_or_404(Quiz, id=quiz_id)
+        
+        title = request.data.get('title')
+        book_id = request.data.get('book_id')
+        questions_data = request.data.get('questions', [])
+        
+        if not title:
+            return Response({'error': 'Title is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not book_id:
+            return Response({'error': 'Book selection is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not questions_data:
+            return Response({'error': 'Questions list cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        book = get_object_or_404(Book, id=book_id)
+        
+        try:
+            with transaction.atomic():
+                # Update quiz
+                quiz.title = title
+                quiz.book = book
+                quiz.save()
+                
+                # Identify questions to keep vs delete vs create
+                existing_question_ids = []
+                for q_data in questions_data:
+                    q_id = q_data.get('id')
+                    if q_id:
+                        # Update existing question
+                        q_obj = get_object_or_404(QuizQuestion, id=q_id, quiz=quiz)
+                        q_obj.question_text = q_data.get('question_text', '')
+                        q_obj.option_a = q_data.get('option_a', '')
+                        q_obj.option_b = q_data.get('option_b', '')
+                        q_obj.option_c = q_data.get('option_c', '')
+                        q_obj.option_d = q_data.get('option_d', '')
+                        q_obj.correct_option = q_data.get('correct_option', 'A').upper()
+                        q_obj.difficulty = q_data.get('difficulty', 'Medium')
+                        q_obj.solution = q_data.get('solution', '')
+                        q_obj.save()
+                        existing_question_ids.append(q_id)
+                    else:
+                        # Create new question
+                        new_q = QuizQuestion.objects.create(
+                            quiz=quiz,
+                            question_text=q_data.get('question_text', ''),
+                            option_a=q_data.get('option_a', ''),
+                            option_b=q_data.get('option_b', ''),
+                            option_c=q_data.get('option_c', ''),
+                            option_d=q_data.get('option_d', ''),
+                            correct_option=q_data.get('correct_option', 'A').upper(),
+                            difficulty=q_data.get('difficulty', 'Medium'),
+                            solution=q_data.get('solution', '')
+                        )
+                        existing_question_ids.append(new_q.id)
+                
+                # Delete any questions that were removed
+                QuizQuestion.objects.filter(quiz=quiz).exclude(id__in=existing_question_ids).delete()
+                
+            return Response({'message': 'Quiz updated successfully'}, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': f"Failed to update quiz: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class QuizDeleteView(APIView):
     """API endpoint for admins to delete a quiz."""
     permission_classes = (permissions.IsAdminUser,)
