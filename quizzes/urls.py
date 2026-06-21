@@ -4,7 +4,8 @@ from .views import (
     AdminQuizListView, StudentQuizListView, QuizDetailView, 
     QuizSubmitView, StudentAttemptHistoryView, AdminQuizAttemptsView,
     AdminQuizDetailView, AdminQuizToggleFreeView, AdminBookListCreateView, AdminBookDetailView,
-    CategoryListView, SubjectListView, ClassListView, BookDetailView, QuizUpdateView
+    CategoryListView, SubjectListView, ClassListView, BookDetailView, QuizUpdateView,
+    AdminBookChapterReorderView
 )
 
 urlpatterns = [
@@ -19,6 +20,7 @@ urlpatterns = [
     path('admin/detail/<int:pk>/', AdminQuizDetailView.as_view(), name='quiz_admin_detail'),
     path('admin/books/', AdminBookListCreateView.as_view(), name='admin_books_list'),
     path('admin/books/<int:pk>/', AdminBookDetailView.as_view(), name='admin_books_detail'),
+    path('admin/books/<int:book_id>/reorder-chapters/', AdminBookChapterReorderView.as_view(), name='admin_book_chapter_reorder'),
     
     # Student endpoints
     path('student/list/', StudentQuizListView.as_view(), name='quiz_student_list'),

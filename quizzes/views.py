@@ -342,6 +342,32 @@ class AdminQuizToggleFreeView(APIView):
             return Response({'error': f"Failed to update status: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AdminBookChapterReorderView(APIView):
+    """API endpoint for admins to reorder chapters within a book."""
+    permission_classes = (permissions.IsAdminUser,)
+
+    def post(self, request, book_id, *args, **kwargs):
+        book = get_object_or_404(Book, id=book_id)
+        chapter_orders = request.data.get('chapter_orders', [])
+
+        if not isinstance(chapter_orders, list):
+            return Response({'error': 'chapter_orders must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                for item in chapter_orders:
+                    quiz_id = item.get('id')
+                    order_val = item.get('order')
+                    
+                    if quiz_id is not None and order_val is not None:
+                        # Ensure we only update quizzes belonging to this book
+                        Quiz.objects.filter(id=quiz_id, book=book).update(order=order_val)
+            
+            return Response({'message': 'Chapters reordered successfully.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': f"Failed to reorder chapters: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # --- Book Views ---
 
 class AdminBookListCreateView(generics.ListCreateAPIView):
