@@ -221,14 +221,14 @@ class QuizDeleteView(APIView):
 class AdminQuizListView(generics.ListAPIView):
     """API endpoint for admins to see all quizzes with full detail."""
     permission_classes = (permissions.IsAdminUser,)
-    queryset = Quiz.objects.all().order_by('-created_at')
+    queryset = Quiz.objects.all().order_by('order', '-created_at')
     serializer_class = QuizAdminSerializer
 
 
 class StudentQuizListView(generics.ListAPIView):
     """API endpoint for students to see active tests."""
     permission_classes = (permissions.AllowAny,)
-    queryset = Quiz.objects.filter(is_live=True).order_by('created_at')
+    queryset = Quiz.objects.filter(is_live=True).order_by('order', 'created_at')
     serializer_class = QuizSerializer
 
 
