@@ -383,38 +383,47 @@ class AdminBookDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BookSerializer
 
 class CategoryListView(APIView):
-    """Returns unique book categories (e.g. NCERT, Spectrum) with a representative cover."""
+    """Returns unique subjects instead of book categories."""
     permission_classes = (permissions.AllowAny,)
     
     def get(self, request, *args, **kwargs):
         data = []
         seen = set()
         for b in Book.objects.filter(is_active=True):
-            if b.book_name not in seen:
-                seen.add(b.book_name)
+            if b.subject not in seen:
+                seen.add(b.subject)
                 data.append({
-                    'book_name': b.book_name,
-                    'cover_image': request.build_absolute_uri(b.cover_image.url) if b.cover_image else None
+                    'subject': b.subject,
+                    'cover_image': None
                 })
         return Response(data, status=status.HTTP_200_OK)
 
 class SubjectListView(APIView):
-    """Returns unique subjects for a specific book category."""
+    """Returns unique sources (book_name) for a specific subject."""
     permission_classes = (permissions.AllowAny,)
     
-    def get(self, request, book_name, *args, **kwargs):
-        subjects = Book.objects.filter(is_active=True, book_name=book_name).values_list('subject', flat=True).distinct()
-        return Response(list(subjects), status=status.HTTP_200_OK)
+    def get(self, request, subject, *args, **kwargs):
+        data = []
+        seen = set()
+        for b in Book.objects.filter(is_active=True, subject=subject):
+            if b.book_name not in seen:
+                seen.add(b.book_name)
+                image_url = b.source_image.url if b.source_image else (b.cover_image.url if b.cover_image else None)
+                data.append({
+                    'book_name': b.book_name,
+                    'cover_image': request.build_absolute_uri(image_url) if image_url else None
+                })
+        return Response(data, status=status.HTTP_200_OK)
 
 class ClassListView(generics.ListAPIView):
-    """Returns actual Book instances (Classes) for a given book category and subject."""
+    """Returns actual Book instances (Classes) for a given subject and book category (source)."""
     permission_classes = (permissions.AllowAny,)
     serializer_class = BookSerializer
 
     def get_queryset(self):
-        book_name = self.kwargs.get('book_name')
         subject = self.kwargs.get('subject')
-        return Book.objects.filter(is_active=True, book_name=book_name, subject=subject).order_by('class_name')
+        book_name = self.kwargs.get('book_name')
+        return Book.objects.filter(is_active=True, subject=subject, book_name=book_name).order_by('class_name')
 
 class BookDetailView(generics.RetrieveAPIView):
     """Gets details of a book, frontend will fetch quizzes (chapters) separately."""

@@ -6,7 +6,7 @@ class BookSerializer(serializers.ModelSerializer):
     """Details of a Book."""
     class Meta:
         model = Book
-        fields = ('id', 'book_name', 'subject', 'class_name', 'cover_image', 'full_price', 'is_active', 'created_at')
+        fields = ('id', 'book_name', 'subject', 'class_name', 'cover_image', 'source_image', 'full_price', 'is_active', 'created_at')
 
 class QuizQuestionStudentSerializer(serializers.ModelSerializer):
     """Serializer for students taking the test. Excludes correct answer and explanation to prevent cheating."""

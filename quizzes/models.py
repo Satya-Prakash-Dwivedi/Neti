@@ -7,6 +7,7 @@ class Book(models.Model):
     subject = models.CharField(max_length=100)
     class_name = models.CharField(max_length=100, blank=True, null=True)
     cover_image = models.FileField(upload_to='book_covers/', blank=True, null=True)
+    source_image = models.FileField(upload_to='source_covers/', blank=True, null=True)
     full_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
