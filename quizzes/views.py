@@ -35,7 +35,7 @@ class CSVParsePreviewView(APIView):
                     cleaned_line = cleaned_line[2:-2]
                 elif cleaned_line.startswith('""') and cleaned_line.endswith('""'):
                     cleaned_line = cleaned_line[1:-1]
-                cleaned_line = cleaned_line.replace('""', '"')
+                # Removed: cleaned_line = cleaned_line.replace('""', '"') to avoid breaking valid CSV escaping
                 lines.append(cleaned_line)
             decoded_file = '\n'.join(lines)
             
@@ -47,6 +47,18 @@ class CSVParsePreviewView(APIView):
             headers = next(reader)
             # Clean headers (strip spaces and quotes)
             headers = [h.replace('"', '').strip().lower() for h in headers]
+            
+            # Normalize headers
+            normalized_headers = []
+            for h in headers:
+                if h == 'option a': h = 'option_a'
+                elif h == 'option b': h = 'option_b'
+                elif h == 'option c': h = 'option_c'
+                elif h == 'option d': h = 'option_d'
+                elif h == 'correct answer' or h == 'answer': h = 'correct_option'
+                elif h == 'explanation': h = 'solution'
+                normalized_headers.append(h)
+            headers = normalized_headers
             
             required_fields = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option']
             for field in required_fields:
@@ -70,13 +82,35 @@ class CSVParsePreviewView(APIView):
                             val = val[1:-1]
                         row_data[header] = val
                 
+                raw_correct = row_data.get('correct_option', 'A').strip()
+                opt_a = row_data.get('option_a', '').strip()
+                opt_b = row_data.get('option_b', '').strip()
+                opt_c = row_data.get('option_c', '').strip()
+                opt_d = row_data.get('option_d', '').strip()
+                
+                correct_letter = 'A'
+                if len(raw_correct) > 1:
+                    if raw_correct.lower() == opt_a.lower(): correct_letter = 'A'
+                    elif raw_correct.lower() == opt_b.lower(): correct_letter = 'B'
+                    elif raw_correct.lower() == opt_c.lower(): correct_letter = 'C'
+                    elif raw_correct.lower() == opt_d.lower(): correct_letter = 'D'
+                    elif raw_correct.upper().startswith('OPTION '): correct_letter = raw_correct[-1].upper()
+                    else:
+                        first_char = raw_correct[0].upper()
+                        if first_char in ['A', 'B', 'C', 'D']:
+                            correct_letter = first_char
+                elif len(raw_correct) == 1:
+                    correct_letter = raw_correct.upper()
+                    if correct_letter not in ['A', 'B', 'C', 'D']:
+                        correct_letter = 'A'
+
                 questions.append({
                     'question_text': row_data.get('question', ''),
-                    'option_a': row_data.get('option_a', ''),
-                    'option_b': row_data.get('option_b', ''),
-                    'option_c': row_data.get('option_c', ''),
-                    'option_d': row_data.get('option_d', ''),
-                    'correct_option': row_data.get('correct_option', 'A').upper(),
+                    'option_a': opt_a,
+                    'option_b': opt_b,
+                    'option_c': opt_c,
+                    'option_d': opt_d,
+                    'correct_option': correct_letter,
                     'difficulty': row_data.get('difficulty', 'Medium'),
                     'solution': row_data.get('solution', '')
                 })
@@ -99,14 +133,16 @@ class QuizCreateView(APIView):
         book_id = request.data.get('book_id')
         questions_data = request.data.get('questions', [])
         
+        is_current_affairs = request.data.get('is_current_affairs', False)
+        
         if not title:
             return Response({'error': 'Title is required'}, status=status.HTTP_400_BAD_REQUEST)
-        if not book_id:
+        if not book_id and not is_current_affairs:
             return Response({'error': 'Book selection is required'}, status=status.HTTP_400_BAD_REQUEST)
         if not questions_data:
             return Response({'error': 'Questions list cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
         
-        book = get_object_or_404(Book, id=book_id)
+        book = get_object_or_404(Book, id=book_id) if book_id else None
         
         try:
             with transaction.atomic():
@@ -114,6 +150,7 @@ class QuizCreateView(APIView):
                 quiz = Quiz.objects.create(
                     title=title,
                     book=book,
+                    is_current_affairs=is_current_affairs,
                     is_live=True
                 )
                 
@@ -126,7 +163,7 @@ class QuizCreateView(APIView):
                         option_b=q_data.get('option_b', ''),
                         option_c=q_data.get('option_c', ''),
                         option_d=q_data.get('option_d', ''),
-                        correct_option=q_data.get('correct_option', 'A').upper(),
+                        correct_option=q_data.get('correct_option', 'A').upper()[:10],
                         difficulty=q_data.get('difficulty', 'Medium'),
                         solution=q_data.get('solution', '')
                     )
@@ -151,20 +188,24 @@ class QuizUpdateView(APIView):
         book_id = request.data.get('book_id')
         questions_data = request.data.get('questions', [])
         
+        is_current_affairs = request.data.get('is_current_affairs', False)
+        
         if not title:
             return Response({'error': 'Title is required'}, status=status.HTTP_400_BAD_REQUEST)
-        if not book_id:
+        if not book_id and not is_current_affairs:
             return Response({'error': 'Book selection is required'}, status=status.HTTP_400_BAD_REQUEST)
         if not questions_data:
             return Response({'error': 'Questions list cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
             
-        book = get_object_or_404(Book, id=book_id)
+        book = get_object_or_404(Book, id=book_id) if book_id else None
         
         try:
             with transaction.atomic():
                 # Update quiz
                 quiz.title = title
                 quiz.book = book
+                if 'is_current_affairs' in request.data:
+                    quiz.is_current_affairs = is_current_affairs
                 quiz.save()
                 
                 # Identify questions to keep vs delete vs create
@@ -226,9 +267,16 @@ class AdminQuizListView(generics.ListAPIView):
 
 
 class StudentQuizListView(generics.ListAPIView):
-    """API endpoint for students to see active tests."""
+    """API endpoint for students to see active tests (excluding CA)."""
     permission_classes = (permissions.AllowAny,)
-    queryset = Quiz.objects.filter(is_live=True).order_by('order', 'created_at')
+    queryset = Quiz.objects.filter(is_live=True, is_current_affairs=False).order_by('order', 'created_at')
+    serializer_class = QuizSerializer
+
+
+class StudentCAQuizListView(generics.ListAPIView):
+    """API endpoint for students to see active current affairs quizzes."""
+    permission_classes = (permissions.AllowAny,)
+    queryset = Quiz.objects.filter(is_live=True, is_current_affairs=True).order_by('-created_at')
     serializer_class = QuizSerializer
 
 
@@ -245,6 +293,11 @@ class QuizSubmitView(APIView):
 
     def post(self, request, quiz_id, *args, **kwargs):
         quiz = get_object_or_404(Quiz, id=quiz_id, is_live=True)
+        
+        # Check if user already attempted this quiz
+        if QuizAttempt.objects.filter(student=request.user, quiz=quiz).exists():
+            return Response({'error': 'You have already attempted this quiz and cannot submit it again.'}, status=status.HTTP_400_BAD_REQUEST)
+            
         answers = request.data.get('answers', {}) # Dict mapping question_id (str) to selected_option (str: "A","B","C","D")
         
         questions = quiz.questions.all()

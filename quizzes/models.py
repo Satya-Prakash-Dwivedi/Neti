@@ -23,6 +23,7 @@ class Quiz(models.Model):
     book = models.ForeignKey(Book, related_name='chapters', on_delete=models.CASCADE, null=True, blank=True)
     is_live = models.BooleanField(default=False)
     is_free_test = models.BooleanField(default=False)
+    is_current_affairs = models.BooleanField(default=False)
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

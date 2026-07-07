@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 class DailyDigest(models.Model):
     """Parent model representing a day's current affairs digest."""
@@ -53,3 +54,20 @@ class MainsQuestion(models.Model):
 
     def __str__(self):
         return f"Mains ({self.digest.date_text}): {self.question[:40]}..."
+
+class DailyQuizAttempt(models.Model):
+    """Records a student's performance on a daily current affairs quiz."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='daily_ca_attempts', on_delete=models.CASCADE)
+    digest = models.ForeignKey(DailyDigest, related_name='quiz_attempts', on_delete=models.CASCADE)
+    score = models.IntegerField()
+    total_questions = models.IntegerField()
+    answers_data = models.JSONField(default=dict, blank=True)
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Daily Quiz Attempt"
+        verbose_name_plural = "Daily Quiz Attempts"
+        unique_together = ('user', 'digest')
+
+    def __str__(self):
+        return f"{self.user.email} - {self.digest.date_text} - Score: {self.score}/{self.total_questions}"

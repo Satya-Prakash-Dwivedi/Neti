@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     CSVParsePreviewView, QuizCreateView, QuizDeleteView,
-    AdminQuizListView, StudentQuizListView, QuizDetailView, 
+    AdminQuizListView, StudentQuizListView, StudentCAQuizListView, QuizDetailView, 
     QuizSubmitView, StudentAttemptHistoryView, AdminQuizAttemptsView,
     AdminQuizDetailView, AdminQuizToggleFreeView, AdminBookListCreateView, AdminBookDetailView,
     CategoryListView, SubjectListView, ClassListView, BookDetailView, QuizUpdateView,
@@ -24,6 +24,7 @@ urlpatterns = [
     
     # Student endpoints
     path('student/list/', StudentQuizListView.as_view(), name='quiz_student_list'),
+    path('student/ca-quizzes/', StudentCAQuizListView.as_view(), name='quiz_student_ca_list'),
     path('student/attempts/', StudentAttemptHistoryView.as_view(), name='quiz_student_attempts'),
     path('categories/', CategoryListView.as_view(), name='categories_list'),
     path('categories/<str:subject>/sources/', SubjectListView.as_view(), name='sources_list'),

@@ -30,7 +30,7 @@ class QuizSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quiz
-        fields = ('id', 'title', 'book', 'is_live', 'is_free_test', 'created_at', 'questions', 'question_count')
+        fields = ('id', 'title', 'book', 'is_live', 'is_free_test', 'is_current_affairs', 'created_at', 'questions', 'question_count')
 
     def get_question_count(self, obj):
         return obj.questions.count()
@@ -44,7 +44,7 @@ class QuizAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quiz
-        fields = ('id', 'title', 'book', 'is_live', 'is_free_test', 'created_at', 'questions', 'question_count')
+        fields = ('id', 'title', 'book', 'is_live', 'is_free_test', 'is_current_affairs', 'created_at', 'questions', 'question_count')
 
     def get_question_count(self, obj):
         return obj.questions.count()
@@ -53,8 +53,9 @@ class QuizAdminSerializer(serializers.ModelSerializer):
 class QuizAttemptSerializer(serializers.ModelSerializer):
     """Details of a completed attempt."""
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
+    is_current_affairs = serializers.BooleanField(source='quiz.is_current_affairs', read_only=True)
     student = UserSerializer(read_only=True)
 
     class Meta:
         model = QuizAttempt
-        fields = ('id', 'student', 'quiz', 'quiz_title', 'score', 'total_questions', 'correct_answers', 'completed_at', 'answers_data')
+        fields = ('id', 'student', 'quiz', 'quiz_title', 'is_current_affairs', 'score', 'total_questions', 'correct_answers', 'completed_at', 'answers_data')

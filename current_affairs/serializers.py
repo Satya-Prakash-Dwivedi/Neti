@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import DailyDigest, Topic, MCQ, MainsQuestion
+from .models import DailyDigest, Topic, MCQ, MainsQuestion, DailyQuizAttempt
 
 class TopicSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,7 +24,17 @@ class TopicAdminSerializer(serializers.ModelSerializer):
 class MCQSerializer(serializers.ModelSerializer):
     class Meta:
         model = MCQ
-        fields = ('question', 'options', 'answer', 'explanation')
+        fields = ('id', 'question', 'options', 'answer', 'explanation')
+
+class DailyQuizQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MCQ
+        fields = ('id', 'question', 'options')
+
+class DailyQuizAttemptSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyQuizAttempt
+        fields = ('id', 'user', 'digest', 'score', 'total_questions', 'answers_data', 'completed_at')
 
 class MCQAdminSerializer(serializers.ModelSerializer):
     class Meta:
