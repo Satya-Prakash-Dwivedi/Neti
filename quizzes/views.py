@@ -282,21 +282,22 @@ class StudentCAQuizListView(generics.ListAPIView):
 
 class QuizDetailView(generics.RetrieveAPIView):
     """API endpoint to get a single quiz and its questions for students."""
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
     queryset = Quiz.objects.filter(is_live=True)
     serializer_class = QuizSerializer
 
 
 class QuizSubmitView(APIView):
     """API endpoint to grade a student's quiz attempt."""
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
 
     def post(self, request, quiz_id, *args, **kwargs):
         quiz = get_object_or_404(Quiz, id=quiz_id, is_live=True)
         
         # Check if user already attempted this quiz
-        if QuizAttempt.objects.filter(student=request.user, quiz=quiz).exists():
-            return Response({'error': 'You have already attempted this quiz and cannot submit it again.'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.user.is_authenticated:
+            if QuizAttempt.objects.filter(student=request.user, quiz=quiz).exists():
+                return Response({'error': 'You have already attempted this quiz and cannot submit it again.'}, status=status.HTTP_400_BAD_REQUEST)
             
         answers = request.data.get('answers', {}) # Dict mapping question_id (str) to selected_option (str: "A","B","C","D")
         
@@ -329,17 +330,20 @@ class QuizSubmitView(APIView):
         score = correct_answers
         
         # Save the attempt
-        attempt = QuizAttempt.objects.create(
-            student=request.user,
-            quiz=quiz,
-            score=score,
-            total_questions=total_questions,
-            correct_answers=correct_answers,
-            answers_data=answers
-        )
+        attempt_id = None
+        if request.user.is_authenticated:
+            attempt = QuizAttempt.objects.create(
+                student=request.user,
+                quiz=quiz,
+                score=score,
+                total_questions=total_questions,
+                correct_answers=correct_answers,
+                answers_data=answers
+            )
+            attempt_id = attempt.id
         
         return Response({
-            'attempt_id': attempt.id,
+            'attempt_id': attempt_id,
             'score': score,
             'total_questions': total_questions,
             'correct_answers': correct_answers,
